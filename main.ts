@@ -25,6 +25,22 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
+        "o3-mini": {
+    id: "o3-mini",
+    provider: "OpenAI",
+    providerId: "openai",
+    name: "o3 Mini",
+    multiModal: true,
+    Systemprompt: "",
+    opt_max: {
+        temperatureMax: 2,
+        max_tokensMax: 4096,
+        presence_penaltyMax: 2,
+        frequency_penaltyMax: 2,
+        top_pMax: 1,
+        top_kMax: 500
+    }
+},
         "gpt-4o": {
             id: "gpt-4o",
             provider: "OpenAI",
