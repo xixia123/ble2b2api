@@ -138,7 +138,7 @@ const CONFIG = {
             }
         },
                 "claude-3-7-sonnet-latest": {
-            id: "claude-3-4-sonnet-latest",
+            id: "claude-3-7-sonnet-latest",
             provider: "Anthropic",
             providerId: "anthropic",
             name: "Claude 3.7 Sonnet",
