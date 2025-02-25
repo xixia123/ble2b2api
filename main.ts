@@ -137,6 +137,22 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
+                "claude-3-7-sonnet-latest": {
+            id: "claude-3-4-sonnet-latest",
+            provider: "Anthropic",
+            providerId: "anthropic",
+            name: "Claude 3.7 Sonnet",
+            multiModal: true,
+            Systemprompt: "",
+            opt_max: {
+                temperatureMax: 1,
+                max_tokensMax: 8192,
+                presence_penaltyMax: 2,
+                frequency_penaltyMax: 2,
+                top_pMax: 1,
+                top_kMax: 500
+            }
+        },
         "claude-3-5-haiku-latest": {
             id: "claude-3-5-haiku-latest",
             provider: "Anthropic",
