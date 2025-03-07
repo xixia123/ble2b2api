@@ -57,6 +57,22 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
+        "gpt-4.5-preview": {
+            id: "gpt-4.5-preview",
+            provider: "OpenAI",
+            providerId: "openai",
+            name: "GPT-4.5",
+            multiModal: true,
+            Systemprompt: "",
+            opt_max: {
+                temperatureMax: 2,
+                max_tokensMax: 16380,
+                presence_penaltyMax: 2,
+                frequency_penaltyMax: 2,
+                top_pMax: 1,
+                top_kMax: 500
+            }
+        },
         "gpt-4-turbo": {
             id: "gpt-4-turbo",
             provider: "OpenAI",
