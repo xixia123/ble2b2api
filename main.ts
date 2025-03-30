@@ -105,6 +105,22 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
+"gemini-2.5-pro-exp-03-25": {
+    id: "gemini-2.5-pro-exp-03-25",
+    provider: "Google Generative AI",
+    providerId: "google",
+    name: "Gemini 2.5 Pro Experimental 03-25",
+    multiModal: true,
+    Systemprompt: "",
+    opt_max: {
+        temperatureMax: 2,
+        max_tokensMax: 8192,
+        presence_penaltyMax: 2,
+        frequency_penaltyMax: 2,
+        top_pMax: 1,
+        top_kMax: 40
+    }
+}
         "gemini-exp-1121": {
             id: "gemini-exp-1121",
             provider: "Google Generative AI",
