@@ -26,21 +26,21 @@ const CONFIG = {
             }
         },
         "o3-mini": {
-    id: "o3-mini",
-    provider: "OpenAI",
-    providerId: "openai",
-    name: "o3 Mini",
-    multiModal: true,
-    Systemprompt: "",
-    opt_max: {
-        temperatureMax: 2,
-        max_tokensMax: 4096,
-        presence_penaltyMax: 2,
-        frequency_penaltyMax: 2,
-        top_pMax: 1,
-        top_kMax: 500
-    }
-},
+            id: "o3-mini",
+            provider: "OpenAI",
+            providerId: "openai",
+            name: "o3 Mini",
+            multiModal: true,
+            Systemprompt: "",
+            opt_max: {
+                temperatureMax: 2,
+                max_tokensMax: 4096,
+                presence_penaltyMax: 2,
+                frequency_penaltyMax: 2,
+                top_pMax: 1,
+                top_kMax: 500
+            }
+        },
         "gpt-4o": {
             id: "gpt-4o",
             provider: "OpenAI",
@@ -105,23 +105,22 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
-"gemini-2.5-pro-exp-03-25": {
-    id: "gemini-2.5-pro-exp-03-25",
-    provider: "Google Generative AI",
-    providerId: "google",
-    name: "Gemini 2.5 Pro Experimental 03-25",
-    multiModal: true,
-    Systemprompt: "",
-    opt_max: {
-        temperatureMax: 2,
-        max_tokensMax: 8192,
-        presence_penaltyMax: 2,
-        frequency_penaltyMax: 2,
-        top_pMax: 1,
-        top_kMax: 40
-    }
-},
-
+        "gemini-2.5-pro-exp-03-25": {
+            id: "gemini-2.5-pro-exp-03-25",
+            provider: "Google Generative AI",
+            providerId: "google",
+            name: "Gemini 2.5 Pro Experimental 03-25",
+            multiModal: true,
+            Systemprompt: "",
+            opt_max: {
+                temperatureMax: 2,
+                max_tokensMax: 8192,
+                presence_penaltyMax: 2,
+                frequency_penaltyMax: 2,
+                top_pMax: 1,
+                top_kMax: 40
+            }
+        },
         "gemini-exp-1121": {
             id: "gemini-exp-1121",
             provider: "Google Generative AI",
@@ -170,7 +169,7 @@ const CONFIG = {
                 top_kMax: 500
             }
         },
-                "claude-3-7-sonnet-latest": {
+        "claude-3-7-sonnet-latest": {
             id: "claude-3-7-sonnet-latest",
             provider: "Anthropic",
             providerId: "anthropic",
@@ -220,6 +219,28 @@ const CONFIG = {
     MODEL_PROMPT: "Chatting with users and starting role-playing, the most important thing is to pay attention to their latest messages, use only 'text' to output the chat text reply content generated for user messages, and finally output it in code"
 };
 
+// 日志工具类
+class Logger {
+    static info(message: string, data?: any) {
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] INFO: ${message}`);
+        if (data) {
+            try {
+                // 对于大型响应体，可能需要截断
+                const dataStr = JSON.stringify(data, null, 2).substring(0, 500);
+                console.log(dataStr + (dataStr.length >= 500 ? '...(truncated)' : ''));
+            } catch (e) {
+                console.log('无法序列化日志数据');
+            }
+        }
+    }
+
+    static error(message: string, error?: any) {
+        const timestamp = new Date().toISOString();
+        console.error(`[${timestamp}] ERROR: ${message}`, error);
+    }
+}
+
 // 工具类
 class Utils {
     static uuidv4(): string {
@@ -264,12 +285,14 @@ class Utils {
 // API客户端类
 class ApiClient {
     private modelConfig: any;
+    private requestId: string;
 
-    constructor(modelId: string) {
+    constructor(modelId: string, requestId: string = '') {
         if (!CONFIG.MODEL_CONFIG[modelId]) {
             throw new Error(`不支持的模型: ${modelId}`);
         }
         this.modelConfig = CONFIG.MODEL_CONFIG[modelId];
+        this.requestId = requestId;
     }
 
     processMessageContent(content: any): string | null {
@@ -286,10 +309,16 @@ class ApiClient {
     }
 
     async prepareChatRequest(request: any, config: any) {
+        Logger.info(`[${this.requestId}] 准备聊天请求, 模型: ${this.modelConfig.name}, 消息数: ${request.messages?.length || 0}`);
+        
         const optConfig = config || { model: this.modelConfig.id };
+        const transformedMessages = await this.transformMessages(request);
+        
+        Logger.info(`[${this.requestId}] 转换后的消息数量: ${transformedMessages.length}`);
+        
         return {
             userID: Utils.uuidv4(),
-            messages: await this.transformMessages(request),
+            messages: transformedMessages,
             template: {
                 text: {
                     name: CONFIG.MODEL_PROMPT,
@@ -356,7 +385,8 @@ class ApiClient {
 
 // 响应处理类
 class ResponseHandler {
-    static async handleStreamResponse(chat_message: string, model: string): Promise<Response> {
+    static async handleStreamResponse(chat_message: string, model: string, requestId: string): Promise<Response> {
+        Logger.info(`[${requestId}] 处理流式响应，内容长度: ${chat_message.length} 字符`);
         let index = 0;
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
@@ -366,6 +396,7 @@ class ResponseHandler {
                         if (index >= chat_message.length) {
                             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                             controller.close();
+                            Logger.info(`[${requestId}] 流式响应完成`);
                             return;
                         }
 
@@ -388,6 +419,7 @@ class ResponseHandler {
                             const payload = `data: ${JSON.stringify(eventData)}\n\n`;
                             controller.enqueue(encoder.encode(payload));
                         } catch (error) {
+                            Logger.error(`[${requestId}] 流式响应JSON转换失败`, error);
                             throw new Error('json转换失败');
                         }
 
@@ -397,6 +429,7 @@ class ResponseHandler {
 
                     sendChunk();
                 } catch (error) {
+                    Logger.error(`[${requestId}] 处理流式响应时出错`, error);
                     throw new Error('Error in handleStreamResponse');
                 }
             }
@@ -411,7 +444,9 @@ class ResponseHandler {
         });
     }
 
-    static async handleNormalResponse(chat_message: string, model: string): Promise<Response> {
+    static async handleNormalResponse(chat_message: string, model: string, requestId: string): Promise<Response> {
+        Logger.info(`[${requestId}] 处理普通响应，内容长度: ${chat_message.length} 字符`);
+        
         const responseData = {
             id: Utils.uuidv4(),
             object: "chat.completion",
@@ -436,8 +471,14 @@ class ResponseHandler {
 
 // Deno 服务处理
 Deno.serve(async (request: Request): Promise<Response> => {
+    const requestId = Utils.uuidv4();
+    const url = new URL(request.url);
+    
+    Logger.info(`[${requestId}] 接收到请求: ${request.method} ${url.pathname}`);
+    
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
+        Logger.info(`[${requestId}] 处理CORS预检请求`);
         return new Response(null, {
             headers: {
                 'Access-Control-Allow-Origin': '*',
@@ -447,11 +488,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
         });
     }
 
-    const url = new URL(request.url);
-
     // Models endpoint
     if (url.pathname === '/hf/v1/models' && request.method === 'GET') {
-        return new Response(JSON.stringify({
+        Logger.info(`[${requestId}] 获取模型列表`);
+        
+        const response = new Response(JSON.stringify({
             object: "list",
             data: Object.keys(CONFIG.MODEL_CONFIG).map((model) => ({
                 id: model,
@@ -465,20 +506,36 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 'Access-Control-Allow-Origin': '*'
             }
         });
+        
+        Logger.info(`[${requestId}] 模型列表返回成功，模型数量: ${Object.keys(CONFIG.MODEL_CONFIG).length}`);
+        return response;
     }
 
     // Chat completions endpoint
     if (url.pathname === '/hf/v1/chat/completions' && request.method === 'POST') {
         try {
+            Logger.info(`[${requestId}] 处理聊天完成请求`);
+            
             const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
             if (authToken !== CONFIG.API.API_KEY) {
+                Logger.error(`[${requestId}] 认证失败，提供的令牌: ${authToken?.substring(0, 8)}...`);
                 return new Response(JSON.stringify({ error: "Unauthorized" }), {
                     status: 401,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
 
-            const requestBody = await request.json();
+            // 克隆请求以便读取其内容而不消耗原始请求
+            const requestClone = request.clone();
+            const requestBody = await requestClone.json();
+            Logger.info(`[${requestId}] 用户请求体:`, {
+                model: requestBody.model,
+                messages_count: requestBody.messages?.length,
+                stream: requestBody.stream,
+                temperature: requestBody.temperature,
+                max_tokens: requestBody.max_tokens
+            });
+
             const {
                 model,
                 temperature,
@@ -499,30 +556,53 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 top_k
             }, CONFIG.MODEL_CONFIG[model]);
 
-            const apiClient = new ApiClient(model);
+            const apiClient = new ApiClient(model, requestId);
             const requestPayload = await apiClient.prepareChatRequest(requestBody, configOpt);
 
+            Logger.info(`[${requestId}] 发送到E2B的请求:`, {
+                model: requestPayload.model.name,
+                messages_count: requestPayload.messages?.length,
+                config: requestPayload.config
+            });
+
+            const fetchStartTime = Date.now();
             const fetchResponse = await fetch(`${CONFIG.API.BASE_URL}/api/chat`, {
                 method: "POST",
                 headers: CONFIG.DEFAULT_HEADERS,
                 body: JSON.stringify(requestPayload)
             });
+            const fetchEndTime = Date.now();
 
             const responseData = await fetchResponse.json();
+            Logger.info(`[${requestId}] 收到E2B的响应: ${fetchResponse.status}, 耗时: ${fetchEndTime - fetchStartTime}ms`, {
+                status: fetchResponse.status,
+                has_code: !!responseData?.code,
+                has_text: !!responseData?.text,
+                response_preview: (responseData?.code || responseData?.text || '')?.substring(0, 100) + '...'
+            });
+
             const chat_message = responseData?.code?.trim() ??
                 responseData?.text?.trim() ??
                 responseData?.trim() ??
                 null;
 
             if (!chat_message) {
+                Logger.error(`[${requestId}] E2B没有返回有效响应`);
                 throw new Error('No response from upstream service');
             }
 
-            return stream
-                ? await ResponseHandler.handleStreamResponse(chat_message, model)
-                : await ResponseHandler.handleNormalResponse(chat_message, model);
+            let response;
+            if (stream) {
+                response = await ResponseHandler.handleStreamResponse(chat_message, model, requestId);
+            } else {
+                response = await ResponseHandler.handleNormalResponse(chat_message, model, requestId);
+            }
+            
+            return response;
 
         } catch (error) {
+            Logger.error(`[${requestId}] 处理请求时出错:`, error);
+            
             return new Response(JSON.stringify({
                 error: {
                     message: `${error.message} 请求失败，可能是上下文超出限制或其他错误，请稍后重试。`,
@@ -541,6 +621,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     // 404 处理
+    Logger.info(`[${requestId}] 未找到路径: ${url.pathname}`);
     return new Response('服务运行成功，请使用正确请求路径', {
         status: 404,
         headers: { 'Access-Control-Allow-Origin': '*' }
