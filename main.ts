@@ -121,6 +121,7 @@ const CONFIG = {
         top_kMax: 40
     }
 },
+
         "gemini-exp-1121": {
             id: "gemini-exp-1121",
             provider: "Google Generative AI",
