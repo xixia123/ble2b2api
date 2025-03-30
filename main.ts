@@ -1,4 +1,4 @@
-// 配置常量
+// 配置常量啊
 const CONFIG = {
     API: {
         BASE_URL: "https://fragments.e2b.dev",
