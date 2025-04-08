@@ -2,7 +2,7 @@
 const CONFIG = {
     API: {
         BASE_URL: "https://fragments.e2b.dev",
-        API_KEY: "sk-123456"//自定义你自己的认证密钥，记得修改
+        API_KEY: "sk-shenglin19970201"//自定义你自己的认证密钥，记得修改
     },
     RETRY: {
         MAX_ATTEMPTS: 1,
